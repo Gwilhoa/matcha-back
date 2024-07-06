@@ -1,0 +1,26 @@
+FROM python:3.11.4-bookworm
+
+RUN apt-get update -y && apt-get upgrade -y
+RUN apt-get install -y postgresql-client vim supervisor
+WORKDIR /code
+
+# Ajoutez ces deux lignes pour créer un nouvel utilisateur et lui donner la propriété du répertoire de travail
+RUN addgroup --gid 1000 container
+RUN useradd -ms /bin/bash --uid 1000 matcha
+RUN chown -R matcha:matcha /code
+RUN chmod -R 755 /tmp
+
+ENV PYTHONPATH=/code/app
+ENV EXPORT_PATH=/tmp/
+
+COPY ./app/requirements.txt ./app/requirements.txt
+
+RUN CPUCOUNT=1 pip install -r ./app/requirements.txt
+
+RUN pip install pytest
+RUN export PATH=$PATH:/home/matcha/.local/bin
+
+EXPOSE 5001
+USER matcha
+ENTRYPOINT [ "bash", "-cl", "./envs/dev/back/back-start.sh" ]
+# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

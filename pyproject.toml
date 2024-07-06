@@ -1,0 +1,40 @@
+[project]
+name = 'matcha-back'
+version = '0.0.0'
+description = 'le backend de matcha'
+requires-python = '>=3.11'
+dependencies = [
+    'flask',
+    'flask-cors',
+    'requests',
+    'uwsgi',
+    'python-dotenv',
+    'flask-apispec',
+    'apispec',
+    'apispec-webframeworks',
+    'apispec[marshmallow]',
+    'pymongo',
+    'flask-pymongo',
+    'psycopg2-binary',
+    'sqlalchemy',
+    'python-gitlab',
+    'Authlib',
+    'flask-jwt-extended',
+    'kubernetes',
+    'marshmallow',
+    'pytest'
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.black]
+line-length = 140
+
+[tool.isort]
+profile = 'black'
+
+[tool.bandit]
+skips = ['B104', 'B113', 'B311']
+[tool.bandit.assert_used]
+skips = ['*_test.py', '*test_*.py']

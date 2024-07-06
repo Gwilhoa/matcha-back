@@ -1,0 +1,1 @@
+from .health_check_controller import health_check_blueprint

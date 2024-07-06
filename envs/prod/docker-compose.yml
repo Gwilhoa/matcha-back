@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  postgres:
+    build:
+      context: ../shared/postgres
+    image: starter-postgres:prod
+    ports:
+      - "5432:5432"
+    networks:
+      - prod
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    container_name: starter_postgres
+
+  starter_kit_back:
+    image: starter-back:release
+    container_name: starter_kit_back
+    volumes:
+      - ../.././:/code
+    env_file:
+      - ./back/.env
+    ports:
+      - "5001:5001"
+      - "9001:9001"
+    restart: always
+    networks:
+      - prod
+
+networks:
+  prod:
+
+volumes:
+  postgres_data:
