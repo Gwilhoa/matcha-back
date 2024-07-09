@@ -1,8 +1,6 @@
 import os
 from typing import Final
 
-from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
 from dotenv import load_dotenv
 from utils.env_getter import EnvironmentGetter
 
@@ -18,23 +16,13 @@ class BaseConfig:
             "JWT_SECRET", "JWT secret key used for encryption/decryption of JWTs", required=True
         )
 
-        # Flask
-        self.MIGRATION: Final[bool] = self.env_getter.get_bool("MIGRATION", "Whether to activate Flask-Migrate")
-
         # Database
-        self.USER: Final[str] = self.env_getter.get_string("DB_USER", "Name of the database user", required=True)
+        self.DB_USER: Final[str] = self.env_getter.get_string("DB_USER", "Name of the database user", required=True)
         self.DB_PASS: Final[str] = self.env_getter.get_string("DB_PASS", "Password of the database user", required=True)
         self.DB_NAME: Final[str] = self.env_getter.get_string("DB_NAME", "Name of the database", required=True)
         self.DB_IP: Final[str] = self.env_getter.get_string("DB_IP", "Adress of the database", required=True)
         self.DB_PORT: Final[str] = self.env_getter.get_string("DB_PORT", "Port of the database", required=True)
-        self.SQLALCHEMY_DATABASE_URI: Final[str] = f"postgresql://{self.USER}:{self.DB_PASS}@{self.DB_IP}:{self.DB_PORT}/{self.DB_NAME}"
-        self.APISPEC_SPEC: Final[APISpec] = APISpec(
-            openapi_version="2.0.0",
-            title="Matcha API",
-            version="0.0.1",
-            plugins=[MarshmallowPlugin()],
-        )
-        self.APISPEC_SWAGGER_UI_URL: Final[str] = "/doc/"
+        self.SQLALCHEMY_DATABASE_URI: Final[str] = f"postgresql://{self.DB_USER}:{self.DB_PASS}@{self.DB_IP}:{self.DB_PORT}/{self.DB_NAME}"
 
         self.DEBUG: bool = self.env_getter.get_bool("DEBUG", required=False)
 
