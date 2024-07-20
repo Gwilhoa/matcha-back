@@ -1,10 +1,10 @@
 import psycopg2
-
 from config import BaseConfig
-from managers.database_manager.model_interface import ModelInterface
 from utils.logger import get_console_logger
 
-database_logger = get_console_logger("database_connection")
+from managers.database_manager.model_interface import ModelInterface
+
+database_logger = get_console_logger('database_connection')
 
 
 class DatabaseConnection:
@@ -17,60 +17,68 @@ class DatabaseConnection:
 
         try:
             with psycopg2.connect(
-                    host=self.ip,
-                    port=self.port,
-                    user=self.user,
-                    password=self.password,
-                    database=self.name,
+                host=self.ip,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.name,
             ) as conn:
-                with conn.cursor() as cur:
+                with conn.cursor():
                     conn.commit()
-                    database_logger.info(f"Connected to database {self.name}")
+                    database_logger.info(f'Connected to database {self.name}')
                     self.database = conn
         except Exception as e:
-            database_logger.error(f"Could not connect to database {self.name}: {e}")
+            database_logger.error(f'Could not connect to database {self.name}: {e}')
             raise e
 
     def health_check(self):
         try:
             with self.database.cursor() as cur:
-                cur.execute("SELECT 1")
-                database_logger.info("Database is connected")
+                cur.execute('SELECT 1')
+                database_logger.info('Database is connected')
                 return True
         except Exception as e:
-            database_logger.error(f"Database is not connected: {e}")
+            database_logger.error(f'Database is not connected: {e}')
             return False
 
     def reset_tables(self):
         with self.database.cursor() as cur:
-            cur.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+            cur.execute('DROP SCHEMA public CASCADE; CREATE SCHEMA public;')
             self.database.commit()
-            database_logger.info("Tables reset")
+            database_logger.info('Tables reset')
 
     def create_table(self):
         self.reset_tables()
         subclass = set(ModelInterface.__subclasses__())
         print(subclass, flush=True)
         for model in subclass:
-            name = model.__name__.replace("Model", "")
+            name = model.__name__.replace('Model', '')
             print(model.get_class_fields(), flush=True)
-            request = f"CREATE TABLE IF NOT EXISTS {name} ("
+            request = f'CREATE TABLE IF NOT EXISTS {name} ('
             for field, value in model.get_class_fields().items():
-                request += f"{field} {value},"
-            request = request[:-1] + ");"
+                request += f'{field} {value},'
+            request = request[:-1] + ');'
             with self.database.cursor() as cur:
                 cur.execute(request)
                 self.database.commit()
-                database_logger.info(f"Table {name} created")
+                database_logger.info(f'Table {name} created')
 
     def get_all(self, model: ModelInterface):
-        name = model.__name__.replace("Model", "")
+        name = model.__name__.replace('Model', '')
         with self.database.cursor() as cur:
-            cur.execute(f"SELECT * FROM {name}")
+            cur.execute(f'SELECT * FROM {name}')
             return cur.fetchall()
 
-    def STRING(self, length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):
-        return f"VARCHAR({length}) {'NOT NULL' if not nullable else ''} {'PRIMARY KEY' if primary_key else ''} {'DEFAULT ' + default if default else ''} {'UNIQUE' if unique else ''}"
+    @staticmethod
+    def string(length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):
+        return (
+            f"VARCHAR({length})"
+            f"{'NOT NULL' if not nullable else ''}"
+            f"{'PRIMARY KEY' if primary_key else ''} "
+            f"{'DEFAULT ' + default if default else ''} "
+            f"{'UNIQUE' if unique else ''}"
+        )
 
-    def INT(self):
-        return "INT"
+    @staticmethod
+    def int():
+        return 'INT'

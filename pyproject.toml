@@ -10,29 +10,44 @@ dependencies = [
     'uwsgi',
     'python-dotenv',
     'flask-apispec',
-    'flask-openapi3',
-    'pymongo',
-    'flask-pymongo',
     'psycopg2-binary',
     'sqlalchemy',
-    'python-gitlab',
     'Authlib',
     'flask-jwt-extended',
-    'kubernetes',
     'marshmallow',
-    'pytest'
+    'pytest',
+    'apispec',
+    'apispec-webframeworks',
+    'apispec[marshmallow]',
+    'flask_swagger_ui'
 ]
 
 [tool.setuptools]
 py-modules = []
 
-[tool.black]
+
+[tool.ruff]
+# Set the maximum line length to 140.
 line-length = 140
 
-[tool.isort]
-profile = 'black'
+[tool.ruff.lint]
+# See documentation: https://docs.astral.sh/ruff/rules/
+extend-select = [
+  "UP",
+  "E501",
+  "I",
+  "B",
+  "F",
+  "E",
+  "N",
+  "A",
+  "PL"
+]
 
-[tool.bandit]
-skips = ['B104', 'B113', 'B311']
-[tool.bandit.assert_used]
-skips = ['*_test.py', '*test_*.py']
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true

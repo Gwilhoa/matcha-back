@@ -1,19 +1,23 @@
-from flask_openapi3 import APIBlueprint, Tag
+from flask import Blueprint
+from managers.swagger_manager.doc_decorator import swagger
+from marshmallow import fields
+from setup import db, docs
 
-from setup import db
-
-NAME = "health_check"
-health_check_blueprint = APIBlueprint(f"{NAME}_blueprint", url_prefix="", import_name=__name__)
-TAG = Tag(name="Health Check", description="Check if the database is connected")
+NAME = 'health_check'
+health_check_blueprint = Blueprint(f'{NAME}_blueprint', url_prefix='', import_name=__name__)
 
 
-@health_check_blueprint.get("/", tags=[TAG], description="Check if the database is connected",
-                            responses={200: {"msg": "Database is connected"},
-                                       400: {"msg": "Database is not connected"}})
+@swagger(
+    responses={
+        200: {'description': 'Backend is up and database connection is successful', 'content': {'message': fields.String()}},
+        500: {'description': 'Backend is up but database connection failed', 'content': {'message': fields.String()}},
+    },
+)
+@health_check_blueprint.get('/')
 def do_health_check():
-    """
-    Check if the database is connected
-    """
     if not db.health_check():
-        return {"msg": "Database is not connected"}, 400
-    return {"msg": "Database is connected"}, 200
+        return {'msg': 'Database is not connected'}, 400
+    return {'msg': 'Database is connected'}, 200
+
+
+docs.register_function(do_health_check, health_check_blueprint)

@@ -1,6 +1,6 @@
 import os
 
-from .errors import SeveralEnvironmentVariablesNotFound, WrongBooleanValueError
+from .errors import SeveralEnvironmentVariablesNotFoundError, WrongBooleanValueError
 from .types import EnvironmentVariableSpec
 
 
@@ -12,11 +12,11 @@ class EnvironmentGetter:
         value = os.getenv(variable_name)
         self.variables.append(
             {
-                "name": variable_name,
-                "description": description,
-                "value": value,
-                "required": required,
-                "validate": validate,
+                'name': variable_name,
+                'description': description,
+                'value': value,
+                'required': required,
+                'validate': validate,
             }
         )
         return value
@@ -24,8 +24,8 @@ class EnvironmentGetter:
     def get_bool(self, variable_name, description=None, *, required=True):
         value = self.get_string(variable_name, description=description, required=required)
 
-        truish = ["1", "true", "t", "y", "yes"]
-        falsish = ["0", "false", "f", "n", "no"]
+        truish = ['1', 'true', 't', 'y', 'yes']
+        falsish = ['0', 'false', 'f', 'n', 'no']
         if value is None:
             return None
         elif value.lower() in truish:
@@ -36,8 +36,8 @@ class EnvironmentGetter:
             raise WrongBooleanValueError(variable_name, value)
 
     def fail_if_missing(self):
-        error_variables = [variable for i, variable in enumerate(self.variables) if variable["required"] and (variable["value"] is None)]
+        error_variables = [variable for i, variable in enumerate(self.variables) if variable['required'] and (variable['value'] is None)]
         if len(error_variables) == 0:
             return
 
-        raise SeveralEnvironmentVariablesNotFound(error_variables)
+        raise SeveralEnvironmentVariablesNotFoundError(error_variables)
