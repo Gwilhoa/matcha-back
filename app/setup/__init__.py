@@ -60,4 +60,9 @@ def create_app():
     CORS(app, resources={r'/*': {'origins': '*'}})
 
     db.create_table()
+
+    test = TestModel()
+    test.id_test = '1'
+    test.name = 'test'
+    test.create_one()
     return app

@@ -69,16 +69,36 @@ class DatabaseConnection:
             cur.execute(f'SELECT * FROM {name}')
             return cur.fetchall()
 
+    def get_one(self, model: ModelInterface, id_class: str):
+        name = model.__name__.replace('Model', '')
+        with self.database.cursor() as cur:
+            cur.execute(f'SELECT * FROM {name} WHERE id_{name} = {id_class}')
+            return cur.fetchone()
+
+    def create_one(self, model: ModelInterface, model_object):
+        name = model.__name__.replace('Model', '')
+        fields = model_object.get_fields()
+        with self.database.cursor() as cur:
+            print(f'INSERT INTO {name} ({", ".join(fields.keys())}) VALUES ({", ".join(fields.values())})', flush=True)
+            cur.execute(f'INSERT INTO {name} ({", ".join(fields.keys())}) VALUES ({", ".join(fields.values())})')
+
     @staticmethod
     def string(length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):
         return (
-            f"VARCHAR({length})"
-            f"{'NOT NULL' if not nullable else ''}"
+            f"VARCHAR({length}) "
+            f"{'NOT NULL' if not nullable else ''} "
             f"{'PRIMARY KEY' if primary_key else ''} "
             f"{'DEFAULT ' + default if default else ''} "
             f"{'UNIQUE' if unique else ''}"
         )
 
     @staticmethod
-    def int():
-        return 'INT'
+    def int(*, nullable: bool = False, primary_key: bool = False, default: int = None, unique: bool = False, auto_increment: bool = False):
+        return (
+            f"INT"
+            f"{'NOT NULL' if not nullable else ''}"
+            f"{'PRIMARY KEY' if primary_key else ''} "
+            f"{'DEFAULT ' + str(default) if default else ''} "
+            f"{'UNIQUE' if unique else ''}"
+            f"{'AUTO_INCREMENT' if auto_increment else ''}"
+        )

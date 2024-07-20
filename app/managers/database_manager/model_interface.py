@@ -2,8 +2,14 @@ class ModelInterface:
     def __init__(self, name):
         self.name = name
 
-    def get_class_fields(self):
-        return {k: v for k, v in vars(self).items() if not k.startswith('__') and not callable(v)}
+    @classmethod
+    def get_class_fields(cls):
+        return {k: v for k, v in vars(cls).items() if not k.startswith('__') and not callable(v)}
+
+    def create_one(self):
+        from setup import db
+
+        db.create_one(self)
 
     def get_all(self):
         from setup import db
