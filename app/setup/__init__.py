@@ -34,7 +34,7 @@ docs: SwaggerInterface = SwaggerInterface(PARAMS)
 
 
 class TestModel(ModelInterface):
-    id_test = db.string(nullable=False, primary_key=True)
+    id_test = db.int(nullable=False, primary_key=True)
     name = db.string(nullable=True)
 
 
@@ -65,4 +65,6 @@ def create_app():
     test.id_test = '1'
     test.name = 'test'
     test.create_one()
+
+    print(str(test.get_all()[0].id_test), flush=True)
     return app

@@ -63,11 +63,26 @@ class DatabaseConnection:
                 self.database.commit()
                 database_logger.info(f'Table {name} created')
 
-    def get_all(self, model: ModelInterface):
-        name = model.__name__.replace('Model', '')
-        with self.database.cursor() as cur:
-            cur.execute(f'SELECT * FROM {name}')
-            return cur.fetchall()
+    def get_all(self, model):
+        name = model.__class__.__name__.replace('Model', '').lower()
+        query = f'SELECT * FROM public.{name}'
+        try:
+            with self.database.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()  # Fetch all rows
+                print(rows, flush=True)
+                result = []
+                fields = model.get_class_fields()
+                for row in rows:
+                    # Create an instance of the model and set its fields
+                    instance = model.__class__()
+                    for idx, field in enumerate(fields.keys()):
+                        setattr(instance, field, row[idx])
+                    result.append(instance)
+                return result
+        except Exception as e:
+            print(f"An error occurred: {e}", flush=True)
+            return []
 
     def get_one(self, model: ModelInterface, id_class: str):
         name = model.__name__.replace('Model', '')
@@ -75,12 +90,25 @@ class DatabaseConnection:
             cur.execute(f'SELECT * FROM {name} WHERE id_{name} = {id_class}')
             return cur.fetchone()
 
-    def create_one(self, model: ModelInterface, model_object):
-        name = model.__name__.replace('Model', '')
-        fields = model_object.get_fields()
-        with self.database.cursor() as cur:
-            print(f'INSERT INTO {name} ({", ".join(fields.keys())}) VALUES ({", ".join(fields.values())})', flush=True)
-            cur.execute(f'INSERT INTO {name} ({", ".join(fields.keys())}) VALUES ({", ".join(fields.values())})')
+    def create_one(self, model):
+        name = model.__class__.__name__.replace('Model', '').lower()
+        fields = model.get_class_fields()
+        values = []
+        for field in fields:
+            value = model.__dict__[field]
+            if 'VARCHAR' in fields[field]:
+                values.append(f"'{value}'")
+            else:
+                values.append(str(value))
+        query = f'INSERT INTO public.{name} ({", ".join(fields.keys())}) VALUES ({", ".join(values)})'
+
+        try:
+            with self.database.cursor() as cur:
+                cur.execute(query)
+                self.database.commit()
+        except Exception as e:
+            self.database.rollback()
+            print(f"An error occurred: {e}", flush=True)
 
     @staticmethod
     def string(length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):
@@ -95,10 +123,10 @@ class DatabaseConnection:
     @staticmethod
     def int(*, nullable: bool = False, primary_key: bool = False, default: int = None, unique: bool = False, auto_increment: bool = False):
         return (
-            f"INT"
-            f"{'NOT NULL' if not nullable else ''}"
+            f"INT "
+            f"{'NOT NULL' if not nullable else ''} "
             f"{'PRIMARY KEY' if primary_key else ''} "
             f"{'DEFAULT ' + str(default) if default else ''} "
-            f"{'UNIQUE' if unique else ''}"
-            f"{'AUTO_INCREMENT' if auto_increment else ''}"
+            f"{'UNIQUE' if unique else ''} "
+            f"{'AUTO_INCREMENT' if auto_increment else ''} "
         )
