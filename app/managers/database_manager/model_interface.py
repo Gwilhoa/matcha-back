@@ -11,18 +11,17 @@ class ModelInterface:
 
     @classmethod
     def get_class_fiels_type(cls):
-        VALUE_TYPE = {
+        value_type = {
             'VARCHAR': fields.String,
             'INTEGER': fields.Integer,
         }
         return_fields = {}
         class_fields = cls.get_class_fields()
         for key, value in class_fields.items():
-            for v in VALUE_TYPE:
+            for v in value_type:
                 if v in value:
-                    return_fields[key] = VALUE_TYPE[v]()
+                    return_fields[key] = value_type[v]()
         return return_fields
-
 
     def create_one(self):
         from setup import db
