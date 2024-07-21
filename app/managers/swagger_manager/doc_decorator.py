@@ -1,7 +1,8 @@
 import inspect
 
 from marshmallow import fields
-from utils.marshmallow_utils import BaseSchema
+
+from managers.database_manager.model_interface import ModelInterface
 
 
 def content_generator(content: dict, is_file=False):
@@ -9,7 +10,7 @@ def content_generator(content: dict, is_file=False):
     if is_file:
         content_type = 'multipart/form-data'
     return_value = {}
-    if inspect.isclass(content) and issubclass(content, BaseSchema):
+    if inspect.isclass(content) and issubclass(content, ModelInterface):
         return_value[content_type] = {'schema': content.__name__}
     elif isinstance(content, dict):
         for key, value in content.items():

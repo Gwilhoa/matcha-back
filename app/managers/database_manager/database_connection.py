@@ -81,11 +81,13 @@ class DatabaseConnection:
                     result.append(instance)
                 return result
         except Exception as e:
-            print(f"An error occurred: {e}", flush=True)
+            print(f'An error occurred: {e}', flush=True)
             return []
 
     def get_one(self, model: ModelInterface, id_class: str):
         name = model.__name__.replace('Model', '')
+        if model.get_class_fields().get('id_' + name) is None:
+            raise Exception('Model does not have an id')
         with self.database.cursor() as cur:
             cur.execute(f'SELECT * FROM {name} WHERE id_{name} = {id_class}')
             return cur.fetchone()
@@ -108,7 +110,7 @@ class DatabaseConnection:
                 self.database.commit()
         except Exception as e:
             self.database.rollback()
-            print(f"An error occurred: {e}", flush=True)
+            print(f'An error occurred: {e}', flush=True)
 
     @staticmethod
     def string(length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):

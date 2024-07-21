@@ -66,5 +66,5 @@ def create_app():
     test.name = 'test'
     test.create_one()
 
-    print(str(test.get_all()[0].id_test), flush=True)
+    print(test.get_all()[0].dump(), flush=True)
     return app

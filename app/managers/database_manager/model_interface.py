@@ -1,5 +1,4 @@
 class ModelInterface:
-
     def __init__(self):
         pass
 
@@ -12,10 +11,20 @@ class ModelInterface:
 
         db.create_one(self)
 
-    def get_all(self):
+    def get_all(self) -> list['ModelInterface']:
         from setup import db
 
         return db.get_all(self)
 
-    def commit(self):
-        pass
+    def get_one(self, id_class):
+        from setup import db
+
+        return db.get_one(self, id_class)
+
+    def dump(self):
+        return self.__dict__
+
+    def load(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        return self
