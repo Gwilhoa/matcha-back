@@ -120,9 +120,3 @@ class SwaggerInterface:
         endpoint = f'{target_blueprint.name}.{target_function.__name__.lower()}'
         target_function.__doc__ = None
         self.functions.append({'endpoint': endpoint, 'target_function': target_function, 'blueprint': target_blueprint})
-
-    def register_schema(self, schema):
-        try:
-            self.docs.components.schema(schema.__class__.__name__, schema=schema)
-        except DuplicateComponentNameError:
-            pass

@@ -11,8 +11,9 @@ def content_generator(content: dict, is_file=False):
         content_type = 'multipart/form-data'
     return_value = {}
     if inspect.isclass(content) and issubclass(content, ModelInterface):
-        return_value[content_type] = {'schema': content.__name__}
-    elif isinstance(content, dict):
+        print(content.get_class_fiels_type(), flush=True)
+        content = content.get_class_fiels_type()
+    if isinstance(content, dict):
         for key, value in content.items():
             if not issubclass(value.__class__, fields.Field):
                 raise Exception(f"[swagger] Invalid body content for key '{key}'")

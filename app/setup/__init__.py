@@ -61,10 +61,4 @@ def create_app():
 
     db.create_table()
 
-    test = TestModel()
-    test.id_test = '1'
-    test.name = 'test'
-    test.create_one()
-
-    print(test.get_all()[0].dump(), flush=True)
     return app

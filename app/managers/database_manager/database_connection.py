@@ -66,11 +66,16 @@ class DatabaseConnection:
     def get_all(self, model):
         name = model.__class__.__name__.replace('Model', '').lower()
         query = f'SELECT * FROM public.{name}'
+
+        print(f'Executing query: {query}', flush=True)
+
         try:
             with self.database.cursor() as cur:
                 cur.execute(query)
-                rows = cur.fetchall()  # Fetch all rows
-                print(rows, flush=True)
+                rows = cur.fetchall()
+                self.database.commit()
+                print(f'Rows fetched: {rows}', flush=True)
+
                 result = []
                 fields = model.get_class_fields()
                 for row in rows:
@@ -79,18 +84,24 @@ class DatabaseConnection:
                     for idx, field in enumerate(fields.keys()):
                         setattr(instance, field, row[idx])
                     result.append(instance)
+
                 return result
         except Exception as e:
             print(f'An error occurred: {e}', flush=True)
             return []
 
     def get_one(self, model: ModelInterface, id_class: str):
-        name = model.__name__.replace('Model', '')
+        name = model.__class__.__name__.replace('Model', '').lower()
         if model.get_class_fields().get('id_' + name) is None:
             raise Exception('Model does not have an id')
         with self.database.cursor() as cur:
             cur.execute(f'SELECT * FROM {name} WHERE id_{name} = {id_class}')
-            return cur.fetchone()
+            row = cur.fetchone()
+            self.database.commit()
+            instance = model.__class__()
+            for idx, field in enumerate(model.get_class_fields().keys()):
+                setattr(instance, field, row[idx])
+            return instance
 
     def create_one(self, model):
         name = model.__class__.__name__.replace('Model', '').lower()
@@ -125,7 +136,7 @@ class DatabaseConnection:
     @staticmethod
     def int(*, nullable: bool = False, primary_key: bool = False, default: int = None, unique: bool = False, auto_increment: bool = False):
         return (
-            f"INT "
+            f"INTEGER "
             f"{'NOT NULL' if not nullable else ''} "
             f"{'PRIMARY KEY' if primary_key else ''} "
             f"{'DEFAULT ' + str(default) if default else ''} "

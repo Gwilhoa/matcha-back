@@ -1,3 +1,6 @@
+from marshmallow import fields
+
+
 class ModelInterface:
     def __init__(self):
         pass
@@ -5,6 +8,21 @@ class ModelInterface:
     @classmethod
     def get_class_fields(cls):
         return {k: v for k, v in vars(cls).items() if not k.startswith('__') and not callable(v)}
+
+    @classmethod
+    def get_class_fiels_type(cls):
+        VALUE_TYPE = {
+            'VARCHAR': fields.String,
+            'INTEGER': fields.Integer,
+        }
+        return_fields = {}
+        class_fields = cls.get_class_fields()
+        for key, value in class_fields.items():
+            for v in VALUE_TYPE:
+                if v in value:
+                    return_fields[key] = VALUE_TYPE[v]()
+        return return_fields
+
 
     def create_one(self):
         from setup import db
