@@ -11,7 +11,6 @@ def content_generator(content: dict, is_file=False):
         content_type = 'multipart/form-data'
     return_value = {}
     if inspect.isclass(content) and issubclass(content, ModelInterface):
-        print(content.get_class_fiels_type(), flush=True)
         content = content.get_class_fiels_type()
     if isinstance(content, dict):
         for key, value in content.items():

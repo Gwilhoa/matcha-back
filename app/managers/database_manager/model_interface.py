@@ -41,7 +41,9 @@ class ModelInterface:
     def dump(self):
         return self.__dict__
 
-    def load(self, data):
+    @classmethod
+    def load(cls, data):
+        obj = cls()
         for key, value in data.items():
-            setattr(self, key, value)
-        return self
+            setattr(obj, key, value)
+        return obj
