@@ -1,7 +1,7 @@
 from flask import Blueprint
 from managers.swagger_manager.doc_decorator import swagger
 from marshmallow import fields
-from setup import TestModel, db, docs
+from setup import db, docs
 
 NAME = 'health_check'
 health_check_blueprint = Blueprint(f'{NAME}_blueprint', url_prefix='', import_name=__name__)
@@ -10,7 +10,7 @@ health_check_blueprint = Blueprint(f'{NAME}_blueprint', url_prefix='', import_na
 @swagger(
     responses={
         200: {'description': 'Backend is up and database connection is successful', 'content': {'message': fields.String()}},
-        500: {'description': 'Backend is up but database connection failed', 'content': TestModel},
+        500: {'description': 'Backend is up but database connection failed'},
     },
 )
 @health_check_blueprint.get('/')

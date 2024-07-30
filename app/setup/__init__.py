@@ -5,7 +5,7 @@ from config import config
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from managers.database_manager.database_connection import DatabaseConnection, ModelInterface
+from managers.database_manager.database_connection import DatabaseConnection
 from managers.swagger_manager import SwaggerInterface
 from managers.swagger_manager.swagger_interface import SwaggerParams
 from utils.logger import get_console_logger, setup_loggers_color
@@ -31,11 +31,6 @@ PARAMS = SwaggerParams(
     },
 )
 docs: SwaggerInterface = SwaggerInterface(PARAMS)
-
-
-class TestModel(ModelInterface):
-    id_test = db.int(nullable=False, primary_key=True)
-    name = db.string(nullable=True)
 
 
 def create_app():
