@@ -16,6 +16,25 @@ def validate_identifier(identifier):
     return identifier
 
 
+def convert_value(field_type, value):
+    """Convert the value to the appropriate type based on the field_type."""
+    conversion_functions = {
+        'VARCHAR': str,
+        'INTEGER': int,
+        'FLOAT': float,
+        'BOOLEAN': lambda v: v.lower() in ['true', '1'],
+        'DATE': str,
+        'UUID': str,
+    }
+
+    # Determine the conversion function based on the field type
+    for key in conversion_functions.keys():
+        if key in field_type:
+            return conversion_functions[key](value)
+
+    raise Exception(f'Unsupported field type: {field_type}')
+
+
 class DatabaseConnection:
     def __init__(self, config: BaseConfig):
         self.name = config.DB_NAME
@@ -23,19 +42,19 @@ class DatabaseConnection:
         self.user = config.DB_USER
         self.password = config.DB_PASS
         self.ip = config.DB_IP
+        self.database = None
+        self.connect()
 
+    def connect(self):
         try:
-            with psycopg2.connect(
+            self.database = psycopg2.connect(
                 host=self.ip,
                 port=self.port,
                 user=self.user,
                 password=self.password,
                 database=self.name,
-            ) as conn:
-                with conn.cursor():
-                    conn.commit()
-                    database_logger.info(f'Connected to database {self.name}')
-                    self.database = conn
+            )
+            database_logger.info(f'Connected to database {self.name}')
         except Exception as e:
             database_logger.error(f'Could not connect to database {self.name}: {e}')
             raise e
@@ -58,24 +77,33 @@ class DatabaseConnection:
 
     def create_table(self):
         self.reset_tables()
+        references = []
         subclass = set(ModelInterface.__subclasses__())
         for model in subclass:
-            name = validate_identifier(model.__name__.replace('Model', ''))
+            name = validate_identifier(model.__name__.replace('Model', '')).lower()
             fields = model.get_class_fields()
             field_definitions = []
 
             for field, value in fields.items():
                 validated_field = validate_identifier(field)
-                field_definitions.append(f'{validated_field} {value}')
+                if value['type'] == 'foreign_key':
+                    execute_reference = f"ALTER TABLE public.{name} {value['reference'].replace('FIELD', validated_field)}"
+                    references.append(execute_reference)
+                if value['type'] != 'relationship':
+                    field_definitions.append(f'{validated_field} {value["value"]}')
 
             field_definitions_str = ', '.join(field_definitions)
-            request = f'CREATE TABLE IF NOT EXISTS {name} ({field_definitions_str});'
+            request = f'CREATE TABLE IF NOT EXISTS public.{name} ({field_definitions_str});'
             database_logger.debug(f'running {request}')
-
             with self.database.cursor() as cur:
                 cur.execute(request)
                 self.database.commit()
                 database_logger.info(f'Table {name} created')
+        for reference in references:
+            with self.database.cursor() as cur:
+                database_logger.debug(f'execute {reference}')
+                cur.execute(reference)
+                self.database.commit()
 
     def get_primary_key(self, model):
         name = validate_identifier(model.__class__.__name__.replace('Model', '').lower())
@@ -104,27 +132,35 @@ class DatabaseConnection:
         name = validate_identifier(model.__class__.__name__.replace('Model', '').lower())
         query = f'SELECT * FROM public.{name}'
 
-        print(f'Executing query: {query}', flush=True)
-
         try:
             with self.database.cursor() as cur:
                 cur.execute(query)
                 rows = cur.fetchall()
                 self.database.commit()
-                print(f'Rows fetched: {rows}', flush=True)
 
                 result = []
                 fields = model.get_class_fields()
+
                 for row in rows:
-                    # Create an instance of the model and set its fields
                     instance = model.__class__()
                     for idx, field in enumerate(fields.keys()):
-                        setattr(instance, field, row[idx])
+                        field_value = row[idx]
+                        field_type = fields[field]
+
+                        if isinstance(field_type, dict) and field_type.get('type') == 'relationship':
+                            join_field = field_type['join_field']
+                            related_field = self.get_related_field(join_field)
+                            related_model_name = related_field['model']
+                            related_model = self.get_model_by_name(related_model_name)
+                            related_instance = self.get_one(related_model, field_value)
+                            setattr(instance, field, related_instance)
+                        else:
+                            setattr(instance, field, field_value)
                     result.append(instance)
 
                 return result
         except Exception as e:
-            database_logger.error(f'An error occurred while fetching the primary key: {e}')
+            database_logger.error(f'An error occurred while fetching data: {e}')
             return []
 
     def get_one(self, model: ModelInterface, id_class: str):
@@ -147,13 +183,34 @@ class DatabaseConnection:
                     raise Exception(f'No record found with {id_field} = {id_class}')
 
                 instance = model.__class__()
-                for idx, field in enumerate(model.get_class_fields().keys()):
-                    setattr(instance, field, row[idx])
+                fields = model.get_class_fields()
+                for idx, field in enumerate(fields.keys()):
+                    field_value = row[idx]
+                    field_type = fields[field]
+
+                    if isinstance(field_type, dict) and field_type.get('type') == 'relationship':
+                        join_field = field_type['join_field']
+                        related_field = self.get_related_field(join_field)
+                        related_model_name = related_field['model']
+                        related_model = self.get_model_by_name(related_model_name)
+                        related_instance = self.get_one(related_model, field_value)
+                        setattr(instance, field, related_instance)
+                    else:
+                        setattr(instance, field, field_value)
                 return instance
 
         except Exception as e:
-            database_logger.error(f'An error occurred while fetching the primary key: {e}')
+            database_logger.error(f'An error occurred while fetching data: {e}')
             return None
+
+    def get_related_field(self, join_field):
+        # This function retrieves the related model and field for the given join_field
+        for model in ModelInterface.__subclasses__():
+            fields = model.get_class_fields()
+            for _field, field_type in fields.items():
+                if isinstance(field_type, dict) and field_type.get('type') == 'foreign_key' and field_type['field'] == join_field:
+                    return {'model': field_type['model']}
+        raise Exception(f'Related field for join_field {join_field} not found')
 
     def create_one(self, model):
         name = validate_identifier(model.__class__.__name__.replace('Model', '').lower())
@@ -169,12 +226,9 @@ class DatabaseConnection:
             placeholders.append('%s')
             value = model.__dict__.get(field)
 
-            if 'VARCHAR' in field_type:
-                values.append(str(value))
-            elif 'INTEGER' in field_type:
-                values.append(int(value))
-            else:
-                raise Exception(f'Unsupported field type: {field_type}')
+            # Convert value based on field type
+            converted_value = convert_value(field_type, value)
+            values.append(converted_value)
 
         query = f'INSERT INTO public.{name} ({", ".join(field_names)}) VALUES ({", ".join(placeholders)})'
         database_logger.debug(f'running {query}')
@@ -185,25 +239,4 @@ class DatabaseConnection:
                 self.database.commit()
         except Exception as e:
             self.database.rollback()
-            print(f'An error occurred: {e}', flush=True)
-
-    @staticmethod
-    def string(length: int = 255, *, nullable: bool = False, primary_key: bool = False, default: str = None, unique: bool = False):
-        return (
-            f"VARCHAR({length}) "
-            f"{'NOT NULL ' if not nullable else ' '}"
-            f"{'PRIMARY KEY ' if primary_key else ' '}"
-            f"{'DEFAULT ' + default if default else ' '}"
-            f"{'UNIQUE ' if unique else ' '}"
-        )
-
-    @staticmethod
-    def int(*, nullable: bool = False, primary_key: bool = False, default: int = None, unique: bool = False, auto_increment: bool = False):
-        return (
-            f"INTEGER "
-            f"{'NOT NULL ' if not nullable else ' '}"
-            f"{'PRIMARY KEY ' if primary_key else ' '}"
-            f"{'DEFAULT ' + str(default) if default else ' '}"
-            f"{'UNIQUE ' if unique else ' '}"
-            f"{'AUTO_INCREMENT ' if auto_increment else ' '}"
-        )
+            database_logger.error(f'An error occurred: {e}')
