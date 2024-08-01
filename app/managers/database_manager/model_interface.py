@@ -12,21 +12,25 @@ class ModelInterface:
     @classmethod
     def get_class_fiels_type(cls):
         value_type = {
-            'VARCHAR': fields.String,
-            'INTEGER': fields.Integer,
+            'string': fields.String,
+            'integer': fields.Integer,
+            'float': fields.Float,
+            'boolean': fields.Boolean,
+            'date': fields.Date,
+            'uuid': fields.String,
         }
         return_fields = {}
         class_fields = cls.get_class_fields()
         for key, value in class_fields.items():
             for v in value_type:
-                if v in value:
+                if v in value['type']:
                     return_fields[key] = value_type[v]()
         return return_fields
 
     def create_one(self):
         from setup import db
 
-        db.create_one(self)
+        return db.create_one(self)
 
     def get_all(self) -> list['ModelInterface']:
         from setup import db

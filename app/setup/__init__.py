@@ -46,9 +46,11 @@ def create_app():
     matcha_logger.info(f'Using database {config.DB_NAME}')
     app.logger.info(f'Using environment {config.ENV}')
 
+    from data.users.controllers import users_blueprint
     from health_check import health_check_blueprint
 
-    app.register_blueprint(health_check_blueprint)
+    app.register_blueprint(health_check_blueprint, url_prefix='')
+    app.register_blueprint(users_blueprint, url_prefix='/api')
 
     docs.init_app(app)
 

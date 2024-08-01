@@ -19,20 +19,18 @@ def validate_identifier(identifier):
 def convert_value(field_type, value):
     """Convert the value to the appropriate type based on the field_type."""
     conversion_functions = {
-        'VARCHAR': str,
-        'INTEGER': int,
-        'FLOAT': float,
-        'BOOLEAN': lambda v: v.lower() in ['true', '1'],
-        'DATE': str,
-        'UUID': str,
+        'string': str,
+        'integer': int,
+        'float': float,
+        'boolean': lambda v: v.lower() in ['true', '1'],
+        'date': str,
+        'uuid': str,
     }
 
+    if field_type['type'] == 'foreign_key':
+        return conversion_functions[field_type['value'].lower()](value)
     # Determine the conversion function based on the field type
-    for key in conversion_functions.keys():
-        if key in field_type:
-            return conversion_functions[key](value)
-
-    raise Exception(f'Unsupported field type: {field_type}')
+    return conversion_functions[field_type['type']](value)
 
 
 class DatabaseConnection:
@@ -222,21 +220,27 @@ class DatabaseConnection:
 
         for field, field_type in fields.items():
             validate_identifier(field)
+            if field_type['type'] == 'relationship' or field not in model.__dict__:
+                continue
             field_names.append(field)
             placeholders.append('%s')
             value = model.__dict__.get(field)
 
-            # Convert value based on field type
             converted_value = convert_value(field_type, value)
             values.append(converted_value)
 
-        query = f'INSERT INTO public.{name} ({", ".join(field_names)}) VALUES ({", ".join(placeholders)})'
+        query = f'INSERT INTO public.{name} ({", ".join(field_names)}) VALUES ({", ".join(placeholders)}) RETURNING *'
         database_logger.debug(f'running {query}')
 
         try:
             with self.database.cursor() as cur:
                 cur.execute(query, values)
                 self.database.commit()
+                result = cur.fetchone()
+                model_instance = model.__class__()
+                for field, value in zip(model_instance.get_class_fields().keys(), result, strict=False):
+                    setattr(model_instance, field, value)
+                return model_instance
         except Exception as e:
             self.database.rollback()
             database_logger.error(f'An error occurred: {e}')
